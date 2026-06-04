@@ -1,19 +1,30 @@
-﻿const { createApp, ref, computed, reactive, watch } = Vue
+﻿const { createApp, ref, computed, reactive, watch, onMounted } = Vue
 
 // ===== Constants =====
+const SUPABASE_URL = 'https://luxyhlippuglteixrsca.supabase.co/rest/v1/'
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1eHlobGlwcHVnbHRlaXhyc2NhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1NzUyNDcsImV4cCI6MjA5NjE1MTI0N30.SLT7H47phyJt9dS8IKtJ_bdUH3Sbv76FR4vNQLzEbJ4'
+
+async function sb(table, method, opts={}){
+  const h={'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json'}
+  if(opts.body)h['Prefer']='return=representation'
+  const r=await fetch(SUPABASE_URL+table+(opts.query||''),{method,headers:h,body:opts.body||null})
+  if(!r.ok&&r.status!==204)throw new Error(await r.text())
+  return method==='DELETE'?null:await r.json()
+}
+
 const TAX = 0.13
 const SALE_R = 0.007
 const PROF_R = 0.20
 const CATS = ['电阻','电容','电感与磁珠','晶振','二、三极管','过压保护器件','其他']
-const CK = 'crm_customers'
-const DK = 'crm_deals'
+
+
 const ORDER = ['dashboard','customers','deals','calculator']
 const TITLES = {dashboard:'仪表盘',customers:'客户',deals:'成交',calculator:'提成计算器'}
 
 // ===== Helpers =====
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 function today(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
-function load(k,f){try{return JSON.parse(localStorage.getItem(k))||f}catch{return f}}
+
 function calcCommission(cost,price,qty){const s=price*qty,t=cost*qty*(1+TAX),p=s-t;return{salesAmount:s,cost:t,profit:p,salesCommission:s*SALE_R,profitCommission:Math.max(p*PROF_R,0),totalCommission:s*SALE_R+Math.max(p*PROF_R,0)}}
 
 // ===== Init =====
@@ -37,10 +48,11 @@ createApp({
     function tagIcon(t){return{意向:'📌','已成交':'✅',重点:'⭐',潜在:'🔍'}[t]||''}
 
     // ========== Data Load ==========
-    const customers=ref(load(CK,[])),deals=ref(load(DK,[]))
-    const customerSearch=ref(''),dealSearch=ref('')
-    watch(customers,v=>localStorage.setItem(CK,JSON.stringify(v)),{deep:true})
-    watch(deals,v=>localStorage.setItem(DK,JSON.stringify(v)),{deep:true})
+    const customers=ref([]),deals=ref([])
+    const customerSearch=ref(''),dealSearch=ref(''),loading=ref(true)
+    onMounted(async()=>{try{const[c,d]=await Promise.all([sb('customers','GET'),sb('deals','GET')]);customers.value=c||[];deals.value=d||[]}catch(e){alert('加载数据失败: '+e.message)}finally{loading.value=false}})
+    
+    
 
     // ========== Customers ==========
     const showAddCustomer=ref(false),showCustDetail=ref(false),showDelCust=ref(false)
@@ -59,15 +71,15 @@ createApp({
     function saveCustomer(){
       if(!custForm.name.trim()){alert('请输入客户名称');return}
       const d={name:custForm.name.trim(),contact:custForm.contact.trim(),phone:custForm.phone.trim(),wechat:custForm.wechat.trim(),email:custForm.email.trim(),address:custForm.address.trim(),tags:[...custForm.tags],note:custForm.note.trim()}
-      if(editCustomer.value){Object.assign(editCustomer.value,d);editCustomer.value=null}
-      else{customers.value.push({id:uid(),...d,createdAt:today()})}
+      Object.assign(editCustomer.value,d);sb('customers','PATCH',{query:'?id=eq.'+editCustomer.value.id,body:JSON.stringify(d)})
+      customers.value.push({id:uid(),...d,createdAt:today()});sb('customers','POST',{body:JSON.stringify(customers.value[customers.value.length-1])})
       showAddCustomer.value=false
       // Auto-save deal from calculator if pending
       if(calcSavePending.value){
         calcSavePending.value=false
         const nc=customers.value[customers.value.length-1]
         const r=calcCommission(calcCost.value,calcPrice.value,calcQtyK.value*1000)
-        deals.value.push({id:uid(),customerId:nc.id,customerName:nc.name,date:calcSaveDate.value,category:calcCategory.value||'其他',costPrice:calcCost.value,sellingPrice:calcPrice.value,quantity:calcQtyK.value*1000,note:calcSaveNote.value||'(来自计算器)',...r})
+        deals.value.push({id:uid(),customerId:nc.id,customerName:nc.name,date:calcSaveDate.value,category:calcCategory.value||'其他',costPrice:calcCost.value,sellingPrice:calcPrice.value,quantity:calcQtyK.value*1000,note:calcSaveNote.value||'(来自计算器)',...r});sb('deals','POST',{body:JSON.stringify(deals.value[deals.value.length-1])})
         go('deals')
       }
     }
@@ -80,7 +92,7 @@ createApp({
     function deleteCustomer(){
       if(!selectedCustomer.value)return
       const i=customers.value.findIndex(c=>c.id===selectedCustomer.value.id)
-      if(i>=0)customers.value.splice(i,1)
+      if(i>=0){const did=customers.value[i].id;customers.value.splice(i,1);sb('customers','DELETE',{query:'?id=eq.'+did});sb('deals','DELETE',{query:'?customer_id=eq.'+did})}
       showDelCust.value=false;showCustDetail.value=false;selectedCustomer.value=null
     }
     const customerDeals=computed(()=>{
@@ -111,9 +123,9 @@ createApp({
       const c=customers.value[dealCustomerIdx.value],r=calcCommission(dealCost.value,dealPrice.value,dealQty.value)
       if(editDealId.value){
         const idx=deals.value.findIndex(d=>d.id===editDealId.value)
-        if(idx>=0)Object.assign(deals.value[idx],{customerId:c.id,customerName:c.name,date:dealDate.value,category:dealCategory.value,costPrice:dealCost.value,sellingPrice:dealPrice.value,quantity:dealQty.value,note:dealNote.value,...r})
+        if(idx>=0)Object.assign(deals.value[idx],{customerId:c.id,customerName:c.name,date:dealDate.value,category:dealCategory.value,costPrice:dealCost.value,sellingPrice:dealPrice.value,quantity:dealQty.value,note:dealNote.value,...r});sb('deals','PATCH',{query:'?id=eq.'+editDealId.value,body:JSON.stringify(deals.value[idx])})
       }else{
-        deals.value.push({id:uid(),customerId:c.id,customerName:c.name,date:dealDate.value,category:dealCategory.value,costPrice:dealCost.value,sellingPrice:dealPrice.value,quantity:dealQty.value,note:dealNote.value,...r})
+        deals.value.push({id:uid(),customerId:c.id,customerName:c.name,date:dealDate.value,category:dealCategory.value,costPrice:dealCost.value,sellingPrice:dealPrice.value,quantity:dealQty.value,note:dealNote.value,...r});sb('deals','POST',{body:JSON.stringify(deals.value[deals.value.length-1])})
       }
       resetDealForm()
       showAddDeal.value=false;go('deals')
@@ -134,7 +146,7 @@ createApp({
     function deleteDeal(){
       if(!selectedDeal.value)return
       const i=deals.value.findIndex(d=>d.id===selectedDeal.value.id)
-      if(i>=0)deals.value.splice(i,1)
+      if(i>=0){const did=deals.value[i].id;deals.value.splice(i,1);sb('deals','DELETE',{query:'?id=eq.'+did})}
       showDelDeal.value=false;showDealDetail.value=false;selectedDeal.value=null
     }
     function goAddCustomer(){showAddDeal.value=false;tab.value='customers';openAddCustomer()}
@@ -191,7 +203,7 @@ createApp({
       if(idx<0||idx>=customers.value.length){alert('请选择客户');return}
       const customer=customers.value[idx]
       const r=calcCommission(calcCost.value,calcPrice.value,calcQtyK.value*1000)
-      deals.value.push({id:uid(),customerId:customer.id,customerName:customer.name,date:calcSaveDate.value,category:calcCategory.value||'其他',costPrice:calcCost.value,sellingPrice:calcPrice.value,quantity:calcQtyK.value*1000,note:calcSaveNote.value||'(来自计算器)',...r})
+      deals.value.push({id:uid(),customerId:customer.id,customerName:customer.name,date:calcSaveDate.value,category:calcCategory.value||'其他',costPrice:calcCost.value,sellingPrice:calcPrice.value,quantity:calcQtyK.value*1000,note:calcSaveNote.value||'(来自计算器)',...r});sb('deals','POST',{body:JSON.stringify(deals.value[deals.value.length-1])})
       showCalcSave.value=false;go('deals')
     }
 
@@ -208,11 +220,12 @@ createApp({
       openAddCustomer,toggleTag,saveCustomer,openCustomer,editThisCustomer,deleteCustomer,customerDeals,
       customerSearch,dealSearch,filteredCustomers,filteredDeals,deals,showAddDeal,showDealDetail,showDelDeal,selectedDeal,
       editDealId,dealCustomerIdx,dealDate,dealCategory,dealCost,dealPrice,dealQty,dealNote,categories,
-      saveDeal,openDeal,deleteDeal,editDeal,closeDealForm,goAddCustomer,
+      saveDeal,openDeal,deleteDeal,editDeal,closeDealForm,goAddCustomer,loading,
       calcCost,calcPrice,priceAuto,calcQtyK,calcCategory,profitMargin,marginPresets,currentMargin,quickQtysK,actualQty,perPieceProfit,perPieceComm,result,
       showCalcSave,calcSaveIdx,calcSaveDate,calcSaveNote,clearCalc,saveCalcDeal,doCalcSave,onCalcSelectChange,
       totalSales,totalCommission,recentDeals
     }
   }
 }).mount('#app')
+
 
