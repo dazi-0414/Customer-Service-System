@@ -1,0 +1,332 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>客户信息系统</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
+<script>
+document.addEventListener('wheel', function(e) {
+  if (e.target.type === 'number') e.preventDefault()
+}, {passive: false})
+document.addEventListener('keydown', function(e) {
+  if (e.target.type === 'number' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) e.preventDefault()
+  if (e.key === 'Enter' && e.target.type === 'number') {
+    var ids = ['calcCostInput','calcMarginInput','calcPriceInput','calcQtyInput']
+    var idx = ids.indexOf(e.target.id)
+    if (idx >= 0 && idx < ids.length - 1) {
+      e.preventDefault()
+      var next = document.getElementById(ids[idx + 1])
+      if (next) next.focus()
+    }
+  }
+}, {passive: false})
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#f0f2f5;--card:rgba(255,255,255,0.78);--primary:#4f6ef7;--primary-light:#eef1fe;--danger:#ef4444;--success:#10b981;--text:#1a1a2e;--text2:#6b7280;--radius:16px}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100dvh;-webkit-font-smoothing:antialiased}
+#app{height:100dvh;display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:relative;overflow:hidden}
+.top{height:56px;display:flex;align-items:center;padding:0 20px;font-weight:600;font-size:18px;background:var(--card);backdrop-filter:blur(20px);border-bottom:1px solid rgba(0,0,0,0.04);flex-shrink:0;z-index:10}
+.mid{flex:1;overflow:hidden;position:relative}
+.pg{position:absolute;top:0;left:0;width:100%;height:100%;overflow-y:auto;padding:16px;transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .3s;will-change:transform,opacity}
+.pg.left{transform:translateX(30px);opacity:0;pointer-events:none}
+.pg.right{transform:translateX(-30px);opacity:0;pointer-events:none}
+.pg.now{transform:translateX(0);opacity:1;pointer-events:auto}
+.pg::-webkit-scrollbar{display:none}
+.bot{height:64px;display:flex;background:var(--card);backdrop-filter:blur(20px);border-top:1px solid rgba(0,0,0,0.04);flex-shrink:0;z-index:10;padding-bottom:env(safe-area-inset-bottom)}
+.bt{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;border:none;background:none;color:var(--text2);font-size:11px;transition:.2s}
+.bt .ic{font-size:22px;transition:.2s}
+.bt.on{color:var(--primary)}
+.bt.on .ic{transform:scale(1.05)}
+.card{background:var(--card);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.3);border-radius:var(--radius);padding:16px;box-shadow:0 8px 32px rgba(0,0,0,0.06);margin-bottom:12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.sc{background:var(--card);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.3);border-radius:var(--radius);padding:14px;box-shadow:0 8px 32px rgba(0,0,0,0.06);text-align:center}
+.sc .l{font-size:12px;color:var(--text2)}
+.sc .v{font-size:22px;font-weight:700}
+.sc .v.p{color:var(--primary)}
+.sc .v.g{color:var(--success)}
+.fg{margin-bottom:14px}
+.fl{display:block;font-size:13px;color:var(--text2);margin-bottom:4px}
+.fi{width:100%;padding:10px 14px;border:1.5px solid rgba(0,0,0,0.06);border-radius:10px;font-size:15px;background:rgba(255,255,255,0.6);outline:none;transition:.2s}
+.fi:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(79,110,247,0.12)}
+input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}input[type=number]{-moz-appearance:textfield}select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 20px;border-radius:10px;font-size:15px;font-weight:500;border:none;cursor:pointer;transition:.15s;width:100%}
+.btn.b{background:var(--primary);color:#fff}
+.btn.b:active{transform:scale(0.97)}
+.btn.o{background:transparent;border:1.5px solid var(--primary);color:var(--primary)}
+.btn.d{background:var(--danger);color:#fff}
+.btn.s{padding:6px 14px;font-size:13px;width:auto;border-radius:8px}
+.emp{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:var(--text2)}
+.emp .ic{font-size:48px;opacity:0.4}
+.emp .t{font-size:14px}
+.av{width:44px;height:44px;border-radius:12px;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;flex-shrink:0}
+.mt{font-size:10px;padding:2px 8px;border-radius:10px;background:var(--primary-light);color:var(--primary)}
+.cust-card{display:flex;align-items:center;gap:14px;cursor:pointer}
+.cust-card:active{transform:scale(0.98)}
+.cust-info{flex:1;min-width:0}
+.cust-name{font-weight:600;font-size:15px}
+.cust-meta{font-size:12px;color:var(--text2)}
+.dl-card{cursor:pointer}
+.dl-card:active{transform:scale(0.98)}
+.dl-hd{display:flex;justify-content:space-between;margin-bottom:4px}
+.dl-c{font-weight:600;font-size:15px}
+.dl-d{font-size:12px;color:var(--text2)}
+.dl-bd{display:flex;gap:12px;font-size:13px;color:var(--text2)}
+.dl-cm{margin-top:6px;display:flex;gap:10px;align-items:center}
+.dl-cm .tt{font-weight:700;font-size:16px;color:var(--primary)}
+.dl-cm .br{font-size:12px;color:var(--text2)}
+.ol{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.3);z-index:50;opacity:0;pointer-events:none;transition:.3s}
+.ol.s{opacity:1;pointer-events:auto}
+.st{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:#fff;border-radius:20px 20px 0 0;z-index:51;transform:translateY(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);max-height:85dvh;display:flex;flex-direction:column;box-shadow:0 -8px 32px rgba(0,0,0,0.08)}
+.st.s{transform:translateY(0)}
+.st-h{width:36px;height:4px;border-radius:2px;background:#ddd;margin:10px auto 4px;flex-shrink:0}
+.st-hd{display:flex;align-items:center;justify-content:space-between;padding:8px 20px 12px;flex-shrink:0}
+.st-hd h3{font-size:17px;font-weight:600}
+.st-x{background:none;border:none;font-size:24px;color:var(--text2);cursor:pointer;padding:4px}
+.st-bd{overflow-y:auto;padding:0 20px 20px;flex:1}
+.st-bd::-webkit-scrollbar{display:none}
+.fab{position:absolute;bottom:16px;right:16px;width:48px;height:48px;border-radius:50%;background:var(--primary);color:#fff;border:none;font-size:26px;cursor:pointer;box-shadow:0 4px 16px rgba(79,110,247,0.35);z-index:20;display:flex;align-items:center;justify-content:center}
+.fab:active{transform:scale(0.92)}
+.dg{background:#fff;border-radius:16px;padding:24px;width:280px;text-align:center;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:61}
+.dg h4{font-size:16px;margin-bottom:8px}
+.dg p{font-size:14px;color:var(--text2);margin-bottom:16px}
+.dg .gr{display:flex;gap:10px}
+.dg .gr .btn{flex:1}
+.rb{background:var(--primary-light);border-radius:12px;padding:14px}
+.rr{display:flex;justify-content:space-between;padding:4px 0;font-size:14px}
+.rr .l{color:var(--text2)}
+.rr .v{font-weight:500}
+.rr .v.h{color:var(--primary);font-weight:700;font-size:16px}
+.rr .v.n{color:var(--danger)}
+.rd{height:1px;background:rgba(79,110,247,0.15);margin:6px 0}
+.ch{background:linear-gradient(135deg,var(--primary),#6366f1);color:#fff;border-radius:12px;padding:14px;text-align:center}
+.ch .a{font-size:28px;font-weight:800}
+.ch .s{font-size:12px;opacity:0.8}
+.tg{display:flex;flex-wrap:wrap;gap:8px}
+.tg .t{display:inline-flex;align-items:center;padding:6px 14px;border-radius:20px;font-size:13px;cursor:pointer;border:1px solid #e0e0e0;color:var(--text2);transition:.2s}
+.tg .t.on{background:var(--primary-light);border-color:var(--primary);color:var(--primary);font-weight:500}
+.bbb{display:flex;gap:8px;margin-top:12px}
+.bbb .btn{flex:1}
+.sr{width:100%;padding:10px 14px 10px 36px;border:1.5px solid rgba(0,0,0,0.06);border-radius:10px;font-size:14px;background:rgba(255,255,255,0.6);outline:none;transition:.2s}.sr:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(79,110,247,0.12)}.sw{position:relative;margin-bottom:10px}.sw .ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;opacity:0.4;pointer-events:none}
+@media(min-width:768px){#app{max-width:680px;border-radius:20px;margin:20px auto;height:calc(100dvh-40px);box-shadow:0 12px 48px rgba(0,0,0,0.08);overflow:hidden}.g2{grid-template-columns:1fr 1fr 1fr 1fr}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top"><span>{{ title }}</span></div>
+  <div class="mid">
+    <div class="pg" :class="pgClass('dashboard')">
+      <div class="g2">
+        <div class="sc"><div class="l">客户</div><div class="v p">{{ customers.length }}</div></div>
+        <div class="sc"><div class="l">成交</div><div class="v p">{{ deals.length }}</div></div>
+        <div class="sc"><div class="l">总成交额</div><div class="v p">{{ fmt(totalSales) }}</div></div>
+        <div class="sc"><div class="l">总提成</div><div class="v g">{{ fmt(totalCommission) }}</div></div>
+      </div>
+      <div class="card" v-if="deals.length">
+        <div style="font-weight:600;font-size:14px;margin-bottom:10px">最近成交</div>
+        <div v-for="d in recentDeals" :key="d.id" style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid rgba(0,0,0,0.04)">
+          <span>{{ d.customerName }}</span><span style="color:var(--primary);font-weight:500">{{ fmt(d.totalCommission) }}</span>
+        </div>
+      </div>
+      <div class="card" v-else><div class="emp"><div class="ic">📋</div><div class="t">还没有成交记录</div></div></div>
+    </div>
+    <div class="pg" :class="pgClass('customers')">
+      <div class="sw"><input class="sr" v-model="customerSearch" placeholder="搜索客户名称、联系人、电话..."></div>
+      <template v-if="filteredCustomers.length">
+        <div class="card cust-card" v-for="c in filteredCustomers" :key="c.id" @click="openCustomer(c)">
+          <div class="av">{{ c.name.charAt(0) }}</div>
+          <div class="cust-info">
+            <div class="cust-name">{{ c.name }}</div>
+            <div class="cust-meta">{{ c.contact || c.phone || '暂无联系方式' }}</div>
+            <div style="display:flex;gap:4px;margin-top:4px" v-if="c.tags?.length">
+              <span class="mt" v-for="t in c.tags" :key="t">{{ tagIcon(t) }}{{ t }}</span>
+            </div>
+          </div>
+        </div>
+      </template>
+      <div class="card" v-else><div class="emp"><div class="ic">👥</div><div class="t">{{ customerSearch ? "没有匹配的客户" : "还没有客户" }}</div></div></div>
+      <button class="fab" @click="openAddCustomer()">+</button>
+    </div>
+    <div class="pg" :class="pgClass('deals')">
+      <div class="sw"><input class="sr" v-model="dealSearch" placeholder="搜索客户名、品类..."></div>
+      <template v-if="filteredDeals.length">
+        <div class="card dl-card" v-for="d in filteredDeals" :key="d.id" @click="openDeal(d)">
+          <div class="dl-hd"><div class="dl-c">{{ d.customerName }}</div><div class="dl-d">{{ d.date }}</div></div>
+          <div class="dl-bd"><span>{{ d.category }}</span><span>{{ fmt(d.salesAmount) }}</span><span>{{ d.quantity }}件</span></div>
+          <div class="dl-cm"><span class="tt">{{ fmt(d.totalCommission) }}</span><span class="br">销售{{ fmt(d.salesCommission) }}+利润{{ fmt(d.profitCommission) }}</span></div>
+        </div>
+      </template>
+      <div class="card" v-else><div class="emp"><div class="ic">📄</div><div class="t">{{ dealSearch ? "没有匹配的成交记录" : "还没有成交记录" }}</div></div></div>
+      <button class="fab" @click="showAddDeal=true">+</button>
+    </div>
+    <div class="pg" :class="pgClass('calculator')">
+      <div class="card" style="padding:16px 20px">
+        <div class="fg"><label class="fl">进价（元/件）</label><input class="fi" type="number" v-model.number="calcCost" placeholder="0" min="0" id="calcCostInput"></div>
+        <div class="fg"><label class="fl">利润加成</label><div style="display:flex;gap:8px;align-items:center"><input class="fi" type="number" v-model.number="profitMargin" placeholder="20" min="0" style="flex:1" id="calcMarginInput"> <span style="font-size:14px;color:var(--text2);flex-shrink:0">%</span></div><div style="display:flex;gap:6px;margin-top:6px"><button v-for="p in marginPresets" :key="p" class="btn s o" :class="{b:profitMargin===p}" style="flex:1;font-size:12px;padding:4px" @click="profitMargin=p">{{ p }}%</button></div></div>
+        <div class="fg"><label class="fl">售价（元/件）</label><input class="fi" type="number" v-model.number="calcPrice" placeholder="自动计算" min="0" @input="priceAuto=false" id="calcPriceInput"><div style="font-size:12px;color:var(--text2);margin-top:2px" v-if="calcCost>0">建议售价 = {{ calcCost }} × 1.13 × (1+{{ profitMargin }}%) = <strong>{{ Math.round(calcCost*1.13*(1+profitMargin/100)*10000)/10000 }}</strong></div><div style="font-size:12px;color:var(--text2);margin-top:2px" v-if="calcCost>0&&calcPrice>0">当前利润率：<strong style="color:var(--primary)">{{ currentMargin }}%</strong></div></div>
+        <div class="fg">
+          <label class="fl">数量（K）<span style="font-size:12px;color:var(--text2);font-weight:400"> 1K = 1,000 件</span></label>
+          <input class="fi" type="number" v-model.number="calcQtyK" placeholder="例如 100 = 10 万件" min="0" id="calcQtyInput">
+        </div>
+        <div class="fg"><label class="fl">品类</label><select class="fi" v-model="calcCategory"><option value="" disabled>请选择</option><option v-for="c in categories" :key="c" :value="c">{{ c }}</option></select></div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="ch">
+          <div class="s">总提成</div>
+          <div class="a">{{ fmt(result?.totalCommission || 0) }}</div>
+          <div style="font-size:12px;opacity:0.7;margin-top:2px">销售 {{ fmt(result?.salesCommission || 0) }} + 利润 {{ fmt(result?.profitCommission || 0) }}</div>
+        </div>
+        <div style="padding:14px">
+          <div class="rr"><span class="l">销售额</span><span class="v">{{ fmt(result?.salesAmount || 0) }}</span></div>
+          <div class="rr"><span class="l">总成本（含税）</span><span class="v">{{ fmt(result?.cost || 0) }}</span></div>
+          <div class="rr"><span class="l">利润</span><span class="v" :class="{n:(result?.profit||0)<0}">{{ fmt(result?.profit || 0) }}</span></div>
+          <div class="rd"></div>
+          <div class="rr"><span class="l">单件利润</span><span class="v">{{ fmt(perPieceProfit) }}</span></div>
+          <div class="rr"><span class="l">单件提成</span><span class="v" style="color:var(--primary)">{{ fmt(perPieceComm) }}</span></div>
+          <div class="rr"><span class="l">实际数量</span><span class="v" style="color:var(--text2)">{{ actualQty }} 件</span></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px" v-if="result?.totalCommission > 0">
+        <button class="btn b" style="flex:1" @click="saveCalcDeal">📥 保存到成交</button>
+        <button class="btn o" style="flex:1" @click="clearCalc">↺ 清空</button>
+      </div>
+    </div>
+  </div>
+  <div class="bot">
+    <button class="bt" :class="{on:tab==='dashboard'}" @click="go('dashboard')"><span class="ic">📊</span>仪表盘</button>
+    <button class="bt" :class="{on:tab==='customers'}" @click="go('customers')"><span class="ic">👥</span>客户</button>
+    <button class="bt" :class="{on:tab==='deals'}" @click="go('deals')"><span class="ic">📄</span>成交</button>
+    <button class="bt" :class="{on:tab==='calculator'}" @click="go('calculator')"><span class="ic">🧮</span>计算器</button>
+  </div>
+  <div class="ol" :class="{s:showAddCustomer}" @click="showAddCustomer=false"></div>
+  <div class="st" :class="{s:showAddCustomer}">
+    <div class="st-h"></div>
+    <div class="st-hd"><h3>{{ editCustomer ? '编辑客户' : '新增客户' }}</h3><button class="st-x" @click="showAddCustomer=false">&#10005;</button></div>
+    <div class="st-bd">
+      <div class="fg"><label class="fl">客户名称 *</label><input class="fi" v-model="custForm.name" placeholder="公司名"></div>
+      <div class="fg"><label class="fl">联系人</label><input class="fi" v-model="custForm.contact" placeholder="姓名"></div>
+      <div class="fg"><label class="fl">电话</label><input class="fi" v-model="custForm.phone" placeholder="手机号"></div>
+      <div class="fg"><label class="fl">微信</label><input class="fi" v-model="custForm.wechat" placeholder="微信号"></div>
+      <div class="fg"><label class="fl">邮箱</label><input class="fi" v-model="custForm.email" placeholder="邮箱"></div>
+      <div class="fg"><label class="fl">地址</label><input class="fi" v-model="custForm.address" placeholder="地址"></div>
+      <div class="fg">
+        <label class="fl">标签</label>
+        <div class="tg">
+          <span class="t" :class="{on:custForm.tags.includes('意向')}" @click="toggleTag('意向')">📌 意向</span>
+          <span class="t" :class="{on:custForm.tags.includes('已成交')}" @click="toggleTag('已成交')">✅ 已成交</span>
+          <span class="t" :class="{on:custForm.tags.includes('重点')}" @click="toggleTag('重点')">⭐ 重点</span>
+          <span class="t" :class="{on:custForm.tags.includes('潜在')}" @click="toggleTag('潜在')">🔍 潜在</span>
+        </div>
+      </div>
+      <div class="fg"><label class="fl">备注</label><input class="fi" v-model="custForm.note" placeholder="备注"></div>
+      <button class="btn b" @click="saveCustomer">保存</button>
+    </div>
+  </div>
+  <div class="ol" :class="{s:showCustDetail}" @click="showCustDetail=false"></div>
+  <div class="st" :class="{s:showCustDetail}">
+    <div class="st-h"></div>
+    <div class="st-hd"><h3>{{ selectedCustomer?.name || '' }}</h3><button class="st-x" @click="showCustDetail=false">&#10005;</button></div>
+    <div class="st-bd" v-if="selectedCustomer">
+      <div class="card"><div style="display:grid;gap:8px;font-size:14px">
+        <div><span style="color:var(--text2)">联系人：</span>{{ selectedCustomer.contact || '-' }}</div>
+        <div><span style="color:var(--text2)">电话：</span>{{ selectedCustomer.phone || '-' }}</div>
+        <div><span style="color:var(--text2)">微信：</span>{{ selectedCustomer.wechat || '-' }}</div>
+        <div><span style="color:var(--text2)">邮箱：</span>{{ selectedCustomer.email || '-' }}</div>
+        <div><span style="color:var(--text2)">标签：</span>{{ selectedCustomer.tags?.join('、') || '-' }}</div>
+        <div><span style="color:var(--text2)">备注：</span>{{ selectedCustomer.note || '-' }}</div>
+        <div><span style="color:var(--text2)">创建日期：</span>{{ selectedCustomer.createdAt }}</div>
+      </div></div>
+      <div class="card" v-if="customerDeals.length">
+        <div style="font-weight:600;font-size:14px;margin-bottom:6px">成交记录（{{ customerDeals.length }}）</div>
+        <div v-for="d in customerDeals" :key="d.id" style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;border-bottom:1px solid rgba(0,0,0,0.04)">
+          <span>{{ d.date }} {{ d.category }}</span><span style="color:var(--primary);font-weight:500">{{ fmt(d.totalCommission) }}</span>
+        </div>
+      </div>
+      <div class="bbb"><button class="btn o s" @click="editThisCustomer">&#9998; 编辑</button><button class="btn d s" @click="showDelCust=true">&#128465; 删除</button></div>
+    </div>
+  </div>
+  <div class="ol" :class="{s:showAddDeal}" @click="showAddDeal=false"></div>
+  <div class="st" :class="{s:showAddDeal}">
+    <div class="st-h"></div>
+    <div class="st-hd"><h3>{{ editDealId ? &quot;编辑成交&quot; : &quot;新增成交&quot; }}</h3><button class="st-x" @click="closeDealForm">&#10005;</button></div>
+    <div class="st-bd">
+      <div class="fg"><label class="fl">客户 *</label>
+        <select class="fi" v-model.number="dealCustomerIdx">
+      
+          <option v-for="(c,i) in customers" :key="c.id" :value="i">{{ c.name }}</option>
+        </select>
+        <div style="font-size:12px;color:var(--text2);margin-top:4px">还没有客户？<a href="#" @click.prevent="goAddCustomer">去添加</a></div>
+      </div>
+      <div class="fg"><label class="fl">日期</label><input class="fi" type="date" v-model="dealDate"></div>
+      <div class="fg"><label class="fl">品类 *</label>
+        <select class="fi" v-model="dealCategory">
+          <option value="" disabled>请选择</option>
+          <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">进价（元）*</label><input class="fi" type="number" v-model.number="dealCost" placeholder="0" min="0"></div>
+      <div class="fg"><label class="fl">售价（元）*</label><input class="fi" type="number" v-model.number="dealPrice" placeholder="0" min="0"></div>
+      <div class="fg"><label class="fl">数量 *</label><input class="fi" type="number" v-model.number="dealQty" placeholder="0" min="0"></div>
+      <div class="fg"><label class="fl">备注</label><input class="fi" v-model="dealNote" placeholder="备注"></div>
+      <div class="rb" v-if="dealCost>0&&dealPrice>0&&dealQty>0">
+        <div class="rr"><span class="l">销售额</span><span class="v">{{ fmt(dealPrice*dealQty) }}</span></div>
+        <div class="rr"><span class="l">总成本</span><span class="v">{{ fmt(dealQty*dealCost*1.13) }}</span></div>
+        <div class="rd"></div>
+        <div class="rr"><span class="l">销售提成</span><span class="v">{{ fmt(dealPrice*dealQty*0.007) }}</span></div>
+        <div class="rr"><span class="l">利润提成</span><span class="v">{{ fmt(Math.max((dealPrice*dealQty-dealQty*dealCost*1.13)*0.2,0)) }}</span></div>
+        <div class="rd"></div>
+        <div class="rr"><span class="l">总提成</span><span class="v h">{{ fmt(dealPrice*dealQty*0.007+Math.max((dealPrice*dealQty-dealQty*dealCost*1.13)*0.2,0)) }}</span></div>
+      </div>
+      <button class="btn b" style="margin-top:12px" @click="saveDeal">保存成交</button>
+    </div>
+  </div>
+  <div class="ol" :class="{s:showDealDetail}" @click="showDealDetail=false"></div>
+  <div class="st" :class="{s:showDealDetail}">
+    <div class="st-h"></div>
+    <div class="st-hd"><h3>成交详情</h3><button class="st-x" @click="showDealDetail=false">&#10005;</button></div>
+    <div class="st-bd" v-if="selectedDeal">
+      <div class="ch"><div class="s">总提成</div><div class="a">{{ fmt(selectedDeal.totalCommission) }}</div></div>
+      <div class="card"><div style="display:grid;gap:8px;font-size:14px">
+        <div><span style="color:var(--text2)">客户：</span>{{ selectedDeal.customerName }}</div>
+        <div><span style="color:var(--text2)">日期：</span>{{ selectedDeal.date }}</div>
+        <div><span style="color:var(--text2)">品类：</span>{{ selectedDeal.category }}</div>
+        <div><span style="color:var(--text2)">进价：</span>¥{{ selectedDeal.costPrice }}/件</div>
+        <div><span style="color:var(--text2)">售价：</span>¥{{ selectedDeal.sellingPrice }}/件</div>
+        <div><span style="color:var(--text2)">数量：</span>{{ selectedDeal.quantity }}件</div>
+        <div><span style="color:var(--text2)">备注：</span>{{ selectedDeal.note || '-' }}</div>
+      </div></div>
+      <div class="rb">
+        <div class="rr"><span class="l">销售额</span><span class="v">{{ fmt(selectedDeal.salesAmount) }}</span></div>
+        <div class="rr"><span class="l">总成本</span><span class="v">{{ fmt(selectedDeal.cost) }}</span></div>
+        <div class="rr"><span class="l">利润</span><span class="v" :class="{n:selectedDeal.profit<0}">{{ fmt(selectedDeal.profit) }}</span></div>
+        <div class="rd"></div>
+        <div class="rr"><span class="l">销售提成（7‰）</span><span class="v">{{ fmt(selectedDeal.salesCommission) }}</span></div>
+        <div class="rr"><span class="l">利润提成（20%）</span><span class="v">{{ fmt(selectedDeal.profitCommission) }}</span></div>
+        <div class="rd"></div>
+        <div class="rr"><span class="l">总提成</span><span class="v h">{{ fmt(selectedDeal.totalCommission) }}</span></div>
+      </div>
+      <div class="bbb"><button class="btn o s" @click="editDeal">&#9998; 编辑此成交</button><button class="btn d s" @click="showDelDeal=true">&#128465; 删除此成交</button></div>
+    </div>
+  </div>
+  <div class="ol" :class="{s:showDelCust}" @click="showDelCust=false"></div>
+  <div class="dg" v-if="showDelCust"><h4>确认删除客户？</h4><p>删除后无法恢复</p><div class="gr"><button class="btn o s" @click="showDelCust=false">取消</button><button class="btn d s" @click="deleteCustomer">删除</button></div></div>
+  <div class="ol" :class="{s:showDelDeal}" @click="showDelDeal=false"></div>
+  <div class="dg" v-if="showDelDeal"><h4>确认删除此成交？</h4><p>删除后无法恢复</p><div class="gr"><button class="btn o s" @click="showDelDeal=false">取消</button><button class="btn d s" @click="deleteDeal">删除</button></div></div>
+  <div class="ol" :class="{s:showCalcSave}" @click="showCalcSave=false"></div>
+  <div class="dg" v-if="showCalcSave" style="width:300px"><h4>保存到成交记录</h4><p>选择客户</p>
+    <select class="fi" v-model="calcSaveIdx" style="margin-bottom:8px" @change="onCalcSelectChange"><option value="-1" disabled hidden>请选择客户</option><option value="-2" style="color:var(--primary);font-weight:500">+ 添加客户</option><option v-for="(c,i) in customers" :key="c.id" :value="i">{{ c.name }}</option></select>
+    <input class="fi" type="date" v-model="calcSaveDate" style="margin-bottom:8px">
+    <input class="fi" v-model="calcSaveNote" placeholder="备注（选填）" style="margin-bottom:12px">
+    <div class="gr"><button class="btn o s" @click="showCalcSave=false">取消</button><button class="btn b s" @click="doCalcSave">保存</button></div>
+  </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
+
+
+
+
+
