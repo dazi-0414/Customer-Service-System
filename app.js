@@ -1,4 +1,4 @@
-﻿const { createApp, ref, computed, reactive, watch, onMounted } = Vue
+﻿const { createApp, ref, computed, reactive, watch, onMounted, nextTick } = Vue
 
 // ===== Constants =====
 const SUPABASE_URL = 'https://luxyhlippuglteixrsca.supabase.co/rest/v1/'
@@ -154,6 +154,10 @@ createApp({
     // ========== Calculator ==========
     const calcCost=ref(0),calcPrice=ref(0),priceAuto=ref(true)
     const calcQtyK=ref(0),calcCategory=ref(''),profitMargin=ref(20)
+    let calcDepth=0
+    watch(calcCost,(n)=>{if(n>0&&calcDepth===0){calcDepth++;calcPrice.value=Math.round(n*1.13*(1+profitMargin.value/100)*10000)/10000;nextTick(()=>calcDepth=0)}})
+    watch(profitMargin,(m)=>{if(calcCost.value>0&&calcDepth===0){calcDepth++;calcPrice.value=Math.round(calcCost.value*1.13*(1+m/100)*10000)/10000;nextTick(()=>calcDepth=0)}})
+    watch(calcPrice,(n)=>{if(n>0&&calcCost.value>0&&calcDepth===0){calcDepth++;profitMargin.value=Math.max(0,Math.round((n/calcCost.value/1.13-1)*1000)/10);nextTick(()=>calcDepth=0)}})
     const marginPresets=[15,20,25,30]
     const quickQtysK=[1,10,50,100,500]
 
@@ -172,8 +176,6 @@ createApp({
     })
 
     // Auto-calc price when cost or margin changes
-    watch(calcCost,(n)=>{if(n>0&&priceAuto.value){const m=profitMargin.value/100;calcPrice.value=Math.round(n*1.13*(1+m)*10000)/10000}})
-    watch(profitMargin,(m)=>{if(calcCost.value>0&&priceAuto.value){const p=m/100;calcPrice.value=Math.round(calcCost.value*1.13*(1+p)*10000)/10000}})
 
     // Current margin display (auto or manual)
     const currentMargin=computed(()=>{
@@ -227,5 +229,8 @@ createApp({
     }
   }
 }).mount('#app')
+
+
+
 
 

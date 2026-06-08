@@ -164,8 +164,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     <div class="pg" :class="pgClass('calculator')">
       <div class="card" style="padding:16px 20px">
         <div class="fg"><label class="fl">进价（元/件）</label><input class="fi" type="number" v-model.number="calcCost" placeholder="0" min="0" id="calcCostInput"></div>
-        <div class="fg"><label class="fl">利润加成</label><div style="display:flex;gap:8px;align-items:center"><input class="fi" type="number" v-model.number="profitMargin" placeholder="20" min="0" style="flex:1" id="calcMarginInput"> <span style="font-size:14px;color:var(--text2);flex-shrink:0">%</span></div><div style="display:flex;gap:6px;margin-top:6px"><button v-for="p in marginPresets" :key="p" class="btn s o" :class="{b:profitMargin===p}" style="flex:1;font-size:12px;padding:4px" @click="profitMargin=p">{{ p }}%</button></div></div>
-        <div class="fg"><label class="fl">售价（元/件）</label><input class="fi" type="number" v-model.number="calcPrice" placeholder="自动计算" min="0" @input="priceAuto=false" id="calcPriceInput"><div style="font-size:12px;color:var(--text2);margin-top:2px" v-if="calcCost>0">建议售价 = {{ calcCost }} × 1.13 × (1+{{ profitMargin }}%) = <strong>{{ Math.round(calcCost*1.13*(1+profitMargin/100)*10000)/10000 }}</strong></div><div style="font-size:12px;color:var(--text2);margin-top:2px" v-if="calcCost>0&&calcPrice>0">当前利润率：<strong style="color:var(--primary)">{{ currentMargin }}%</strong></div></div>
+        <div class="fg"><label class="fl">利润加成</label><div style="display:flex;gap:8px;align-items:center"><input class="fi" type="number" v-model.number="profitMargin" placeholder="20" min="0" style="flex:1" id="calcMarginInput"> <span style="font-size:14px;color:var(--text2);flex-shrink:0">%</span></div><div style="display:flex;gap:6px;margin-top:6px"><button v-for="p in marginPresets" :key="p" class="btn s o" :class="{b:profitMargin===p}" style="flex:1;font-size:12px;padding:4px" @click="profitMargin=p;priceAuto=true">{{ p }}%</button></div></div>
+        <div class="fg"><label class="fl">售价（元/件）</label><input class="fi" type="number" v-model.number="calcPrice" placeholder="自动计算" min="0"  id="calcPriceInput"><div style="font-size:12px;color:var(--text2);margin-top:2px" v-if="calcCost>0">建议售价 = {{ calcCost }} × 1.13 × (1+{{ profitMargin }}%) = <strong>{{ Math.round(calcCost*1.13*(1+profitMargin/100)*10000)/10000 }}</strong></div><div style="font-size:12px;color:var(--text2);margin-top:2px" v-if="calcCost>0&&calcPrice>0">当前利润率：<strong style="color:var(--primary)">{{ currentMargin }}%</strong></div></div>
         <div class="fg">
           <label class="fl">数量（K）<span style="font-size:12px;color:var(--text2);font-weight:400"> 1K = 1,000 件</span></label>
           <input class="fi" type="number" v-model.number="calcQtyK" placeholder="例如 100 = 10 万件" min="0" id="calcQtyInput">
@@ -325,6 +325,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 <script src="app.js"></script>
 </body>
 </html>
+
+
 
 
 
